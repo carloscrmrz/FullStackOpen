@@ -1,0 +1,10 @@
+title spa new note
+
+note over browser:
+browser receives notes and executes handling
+that adds note to an array and renders notes
+to display
+end note 
+
+browser->server: HTTP POST https://studies.cs.helsinki.fi/exampleapp/new_note_spa
+server-->browser: 201
