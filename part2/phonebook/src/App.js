@@ -1,19 +1,26 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import axios from 'axios'
 import PhoneBook from './PhoneBook'
 import PersonForm from './PersonForm'
 import Filter from './Filter'
 
 const App = () => {
-  const [persons, setPersons] = useState([
-    {
-      name: 'Arto Hellas',
-      phone: 5512345678,
-    }
-  ]) 
+  const [persons, setPersons] = useState([]) 
   const [newName, setNewName] = useState('')
   const [newPhone, setNewPhone] = useState('')
   const [filter, setFilter] = useState('')
   const [showFilter, setShowFilter] = useState(false)
+
+  function hook() {
+    console.log('getting info from server...')
+    axios
+      .get('http://localhost:3001/persons')
+      .then(response => {
+	setPersons(response.data)
+        console.log('got it!')
+      })
+  }
+  useEffect(hook, [])
 
   function addNewContact(e) {
     e.preventDefault();
@@ -23,7 +30,7 @@ const App = () => {
     }
     const duplicated = 
 	    persons.find(contact =>
-		     contact.name == contactObj.name);
+		     contact.name === contactObj.name);
     if ( duplicated ) {
       alert(`${newName} is already on the phonebook.`)
       return
@@ -54,7 +61,7 @@ const App = () => {
 	             contact.name
 	                    .toLowerCase()
 			    .indexOf(filter
-			             .toLowerCase()) != -1)
+			             .toLowerCase()) !== -1)
   return (
     <div>
       <h2>Phonebook</h2>
