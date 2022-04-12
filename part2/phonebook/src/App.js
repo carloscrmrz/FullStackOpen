@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
+import './index.css'
 import PhoneBook from './PhoneBook'
 import PersonForm from './PersonForm'
 import Filter from './Filter'
+import Notification from './Notification'
+import phoneService from './services/phoneService'
 
 const App = () => {
   const [persons, setPersons] = useState([]) 
@@ -10,14 +12,15 @@ const App = () => {
   const [newPhone, setNewPhone] = useState('')
   const [filter, setFilter] = useState('')
   const [showFilter, setShowFilter] = useState(false)
+  const [notificationMessage, setNotificationMessage] = useState('')
+  const [notificationClass, setNotificationClass] = useState('')
+  const [showNotification, setShowNotification] = useState(false)
 
   function hook() {
-    console.log('getting info from server...')
-    axios
-      .get('http://localhost:3001/persons')
-      .then(response => {
-	setPersons(response.data)
-        console.log('got it!')
+    phoneService
+      .getAll()
+      .then(contactList => {
+	setPersons(contactList)
       })
   }
   useEffect(hook, [])
@@ -32,12 +35,33 @@ const App = () => {
 	    persons.find(contact =>
 		     contact.name === contactObj.name);
     if ( duplicated ) {
-      alert(`${newName} is already on the phonebook.`)
-      return
+       if ( window.confirm(`Do you want to update the number of ${contactObj.name}?`)) {	    
+         phoneService
+  	   .update(duplicated.id, contactObj)
+	   .then(() => {
+	     hook()
+	     setNotificationMessage(`Updated ${contactObj.name}`)
+	     setNotificationClass('added')
+ 	     setShowNotification(true)
+             setNewName('')
+	     setNewPhone('')
+	     setTimeout(()=>setShowNotification(false), 4000)
+	   })
+       }
+       return
     }
-    setPersons(persons.concat(contactObj))
-    setNewName('')
-    setNewPhone('')
+
+    phoneService
+      .create(contactObj)
+      .then(newContact => {
+	setPersons(persons.concat(newContact))
+	setNotificationMessage(`Added ${newContact.name}`)
+	setNotificationClass('added')
+	setShowNotification(true)
+        setNewName('')
+        setNewPhone('')
+	setTimeout(()=>setShowNotification(false), 4000)
+      })
   }
 
   function handleNameChange(e) {
@@ -55,6 +79,22 @@ const App = () => {
     setShowFilter(true)
   }
 
+  function deleteContact(id) {
+    if ( window.confirm(`Do you want to delete ${persons.find(contact =>
+                                                   contact.id === id).name}?`)) {
+      phoneService
+        .deleteData(id)
+        .then(() => hook())
+	.catch(error => {
+	  setNotificationMessage(`This contact was already deleted from the server`)
+	  setNotificationClass('error')
+	  setShowNotification(true)
+	  setTimeout(()=>setShowNotification(false), 4000)
+          hook()
+	})
+    }
+  }
+
   const contactsToShow = !showFilter
     ? persons
     : persons.filter(contact => 
@@ -64,9 +104,14 @@ const App = () => {
 			             .toLowerCase()) !== -1)
   return (
     <div>
-      <h2>Phonebook</h2>
+      <h1>Phonebook</h1>
+      { showNotification &&
+	  <Notification type={notificationClass}
+	                message={notificationMessage}
+      />
+      }
       <Filter value={filter}
-	      onChange={handleFilter}
+              onChange={handleFilter}
       />
       <h3>Add New Contact</h3>
       <PersonForm newName={newName}
@@ -75,7 +120,8 @@ const App = () => {
 	          handlePhoneChange={handlePhoneChange}
 	          addContact={addNewContact}
       />
-      <PhoneBook contacts={contactsToShow} />
+      <PhoneBook contacts={contactsToShow}
+	         deleteContact={deleteContact} />
     </div>
   )
 }
